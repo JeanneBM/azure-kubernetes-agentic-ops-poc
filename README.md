@@ -4,6 +4,8 @@
 
 **Code-defined agent orchestration on Azure Kubernetes Service (AKS), with LLM-assisted diagnosis and deterministic remediation.** The PoC coordinates a diagnostic agent and a remediation agent, deployed as two independently authenticated workloads with separate responsibilities and permissions.
 
+**Agent deployment follows Infrastructure as Code (IaC):** version-controlled Kubernetes manifests define the workloads, configuration, RBAC, and network policies, applied with `kubectl apply` to an existing AKS cluster.
+
 **The agents and their orchestration are implemented in Python and run on AKS.** Azure AI Foundry / Azure OpenAI supplies model inference to the diagnostic agent. The watcher, agent handoff, incident lifecycle, safety policy, and Kubernetes execution are controlled by application code.
 
 The PoC demonstrates one narrowly scoped recovery scenario: correcting an image-reference typo in a Kubernetes Deployment whose images are stored in Azure Container Registry (ACR), such as `paymnets-api:1.4.2` instead of `payments-api:1.4.2`. Cases outside this policy are escalated with evidence and a reason for human review.
