@@ -121,6 +121,23 @@ python -m coverage report -m
 
 Coverage measures which code the tests execute; it does not establish live AKS integration correctness or test assertion quality.
 
+## Automatic environment setup
+
+Run the following one-line command from the repository root in PowerShell 7
+(after signing in with `az login`):
+
+~~~powershell
+./scripts/setup-environment.ps1 -SubscriptionId '<YOUR_SUBSCRIPTION_ID>'
+~~~
+
+The script provisions a dedicated `rg-agentic-ops-poc-lab` resource group,
+one-node AKS with Cilium and Workload Identity, Basic ACR, Azure OpenAI model,
+and separate identities; builds and deploys both agents and a healthy demo.
+It does not inject faults or run tests. No local Docker installation is required.
+See [the setup guide](docs/clean-environment-setup.md) for requirements, defaults,
+resuming setup, local snapshots and cleanup. Existing unrelated resources are
+not adopted. The manual deployment instructions below remain available.
+
 ## Deployment prerequisites
 
 - AKS with OIDC issuer and Workload Identity enabled.
@@ -269,6 +286,19 @@ kubectl get deployment payments-api -n $env:MANAGED_NAMESPACE -o jsonpath='{.spe
 - Automated tests use fake service endpoints; live AKS validation is a separate step.
 
 ## Cleanup
+
+For the automatically provisioned lab, save evidence and run:
+
+~~~powershell
+./scripts/delete-environment-resource-group.ps1 -ResourceGroup 'rg-agentic-ops-poc-lab'
+~~~
+
+This waits for group deletion, verifies AKS node groups, and removes eligible
+unused regional Network Watchers and an empty NetworkWatcherRG. Shared watchers
+are preserved. See [cleanup details](docs/clean-environment-setup.md#cleanup).
+
+The existing commands below are available for manually provisioned environments.
+
 
 To remove only the application from the existing cluster:
 
