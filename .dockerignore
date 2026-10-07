@@ -1,0 +1,12 @@
+.git
+.local
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+*.rendered.yaml
+tests
+docs
+scripts
+*.pdf
+*.mp4
