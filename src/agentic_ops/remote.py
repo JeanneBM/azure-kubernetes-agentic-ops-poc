@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 from .agents import RemediationAgent, RemediationOutcome, SafeRemediationAgent
 from .contracts import ActionRequest, Evidence, Facts, IncidentTrigger, PullFailure
+from .safety import OutOfScope, PolicyViolation
 
 
 class ActionPayload(BaseModel):
@@ -83,7 +84,7 @@ class HttpRemediationAgent(RemediationAgent):
         self._endpoint = endpoint.rstrip("/")
         self._token = token
         self._namespace = namespace
-        self._client = http_client or httpx.Client(timeout=90)
+        self._client = http_client or httpx.Client(timeout=httpx.Timeout(300, connect=10))
 
     def manages(self, namespace: str) -> bool:
         return namespace == self._namespace
@@ -102,6 +103,10 @@ class HttpRemediationAgent(RemediationAgent):
             headers={"X-Agent-Token": self._token},
             json=payload.model_dump(),
         )
+        if response.status_code == 422:
+            raise PolicyViolation(str(response.json().get("detail", "policy rejected proposal")))
+        if response.status_code == 403:
+            raise OutOfScope(str(response.json().get("detail", "namespace outside scope")))
         response.raise_for_status()
         data: dict[str, Any] = response.json()
         action_data = data.get("action")
@@ -133,7 +138,12 @@ def create_remediation_app(agent: SafeRemediationAgent, *, agent_token: str) -> 
 
     @app.post("/internal/v1/remediate", dependencies=[Depends(require_token)])
     def remediate(payload: HandoffPayload):
-        outcome = agent.remediate(payload.trigger(), payload.facts.to_facts())
+        try:
+            outcome = agent.remediate(payload.trigger(), payload.facts.to_facts())
+        except PolicyViolation as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        except OutOfScope as error:
+            raise HTTPException(status_code=403, detail=str(error)) from error
         return {
             "executed": outcome.executed,
             "successful": outcome.successful,
