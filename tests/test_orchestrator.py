@@ -128,3 +128,37 @@ def test_concurrent_signals_execute_the_action_once():
     assert second.deduplicated
     assert len(executor.actions) == 1
 
+
+
+@pytest.mark.parametrize('status', [429, 503])
+def test_transient_diagnostic_error_recovers_before_cooldown(status):
+    import httpx
+
+    class RecoveringDiagnostics(FakeDiagnostics):
+        def collect(self, trigger):
+            self.calls += 1
+            if self.calls == 1:
+                response = httpx.Response(status, request=httpx.Request('POST', 'https://model'))
+                response.raise_for_status()
+            return make_facts()
+
+    diagnostics = RecoveringDiagnostics()
+    delays = []
+    orchestrator, _, executor = build(diagnostics=diagnostics, sleep=delays.append)
+    result = orchestrator.handle(make_trigger())
+    assert result.incident.status is IncidentStatus.RESOLVED
+    assert diagnostics.calls == 2
+    assert delays == [1]
+    assert len(executor.actions) == 1
+
+
+def test_diagnostic_retries_are_bounded():
+    import httpx
+    diagnostics = FakeDiagnostics(error=httpx.ReadTimeout('model unavailable'))
+    delays = []
+    orchestrator, _, executor = build(diagnostics=diagnostics, sleep=delays.append)
+    result = orchestrator.handle(make_trigger())
+    assert result.incident.status is IncidentStatus.ESCALATED
+    assert diagnostics.calls == 3
+    assert delays == [1, 2]
+    assert executor.actions == []

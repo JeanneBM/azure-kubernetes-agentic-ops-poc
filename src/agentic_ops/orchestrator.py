@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
+
+import httpx
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Protocol
@@ -44,11 +47,17 @@ class IncidentOrchestrator:
         groundedness_threshold: float = 0.85,
         cooldown: timedelta = timedelta(minutes=15),
         clock: Callable[[], datetime] | None = None,
+        diagnostic_attempts: int = 3,
+        sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         if not 0 <= groundedness_threshold <= 1:
             raise ValueError("groundedness_threshold must be between 0 and 1")
         if cooldown < timedelta(0):
             raise ValueError("cooldown cannot be negative")
+        if diagnostic_attempts < 1:
+            raise ValueError("diagnostic_attempts must be positive")
+        self._diagnostic_attempts = diagnostic_attempts
+        self._sleep = sleep
         self._diagnostics = diagnostics
         self._remediation_agent = remediation_agent
         self._groundedness_threshold = groundedness_threshold
@@ -89,7 +98,7 @@ class IncidentOrchestrator:
         executed = False
         stage = "diagnostic agent"
         try:
-            facts = self._diagnostics.collect(trigger)
+            facts = self._collect_with_retry(trigger)
             if facts.groundedness < self._groundedness_threshold:
                 return self._escalate(
                     trigger, facts,
@@ -119,6 +128,20 @@ class IncidentOrchestrator:
             return self._escalate(
                 trigger, facts, f"{stage} {type(error).__name__}: {error}", action
             ), executed
+
+    def _collect_with_retry(self, trigger: IncidentTrigger) -> Facts:
+        # Diagnosis is read-only. Never retry a handoff whose write outcome is unknown.
+        for attempt in range(self._diagnostic_attempts):
+            try:
+                return self._diagnostics.collect(trigger)
+            except (httpx.TransportError, httpx.HTTPStatusError) as error:
+                retryable = isinstance(error, httpx.TransportError) or (
+                    error.response.status_code in {408, 429, 500, 502, 503, 504}
+                )
+                if not retryable or attempt + 1 == self._diagnostic_attempts:
+                    raise
+                self._sleep(2 ** attempt)
+        raise AssertionError("unreachable")
 
     @staticmethod
     def _escalate(

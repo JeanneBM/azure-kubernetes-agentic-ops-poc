@@ -132,6 +132,16 @@ empty NetworkWatcherRG. Shared watchers and local files are preserved.
 If setup used a different group, supply that name.
 See the [cleanup script](scripts/delete-environment-resource-group.ps1).
 
+## Incident handling
+
+- Read-only diagnosis retries transient network errors and HTTP 408, 429, 500,
+  502, 503 and 504 up to three attempts, with 1 s and 2 s backoff.
+- Policy rejection details survive the internal HTTP handoff.
+- The handoff read timeout is 300 s, allowing the default 120 s rollout check
+  plus registry validation. This is not an overall infrastructure deadline.
+- Remediation is not automatically retried after an uncertain write outcome.
+  Exhausted diagnosis failures still escalate and use the incident cooldown.
+
 ## Scope and limitations
 
 - One managed namespace and registry; automatic repair only for image-reference typos.
