@@ -70,14 +70,20 @@ $local = Join-Path $root '.local'
 New-Item -ItemType Directory -Force $local | Out-Null
 # Persist names before provisioning so failed runs can resume without another lab.
 $statePath = Join-Path $local "$ResourceGroup.json"
+$groupExists = (Invoke-Az @('group','exists','--name',$ResourceGroup,'-o','tsv') | Out-String).Trim() -eq 'true'
+if ((Test-Path $statePath) -and -not $groupExists) {
+    $retired = Join-Path $local 'retired'
+    New-Item -ItemType Directory -Force $retired | Out-Null
+    $retiredPath = Join-Path $retired ($ResourceGroup+'-'+[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ')+'.json')
+    Move-Item -LiteralPath $statePath -Destination $retiredPath
+}
 if (Test-Path $statePath) {
     $state = Get-Content $statePath -Raw | ConvertFrom-Json
     if ($state.subscriptionId -ne $SubscriptionId -or $state.location -ne $Location -or $state.aiLocation -ne $AiLocation -or $state.nodeVmSize -ne $NodeVmSize -or $state.modelName -ne $ModelName -or $state.modelVersion -ne $ModelVersion -or $state.modelDeployment -ne $ModelDeployment -or $state.modelCapacity -ne $ModelCapacity) {
         throw 'Existing local state uses different parameters. Reuse the original parameters or choose a new ResourceGroup.'
     }
 } else {
-    $exists = Invoke-Az @('group','exists','--name',$ResourceGroup,'-o','tsv')
-    if ($exists.Trim() -eq 'true') { throw "Resource group $ResourceGroup already exists without local setup state. Choose a new -ResourceGroup; this script will not adopt unrelated resources." }
+    if ($groupExists) { throw "Resource group $ResourceGroup already exists without local setup state. Choose a new -ResourceGroup; this script will not adopt unrelated resources." }
     $suffix = [Guid]::NewGuid().ToString('N').Substring(0,10)
     $state = [ordered]@{
         subscriptionId=$SubscriptionId; resourceGroup=$ResourceGroup; location=$Location; aiLocation=$AiLocation

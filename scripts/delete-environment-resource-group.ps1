@@ -37,6 +37,18 @@ $subscription = $account.id
 $base = @('--subscription',$subscription)
 $local = Join-Path (Split-Path $PSScriptRoot -Parent) '.local'
 $inventoryPath = Join-Path $local "$ResourceGroup-cleanup.json"
+$statePath = Join-Path $local "$ResourceGroup.json"
+if (Test-Path $statePath) {
+    $state = Get-Content $statePath -Raw | ConvertFrom-Json
+    if ($state.subscriptionId -ne $subscription -or $state.resourceGroup -ne $ResourceGroup) {
+        throw 'Selected subscription/group differs from recorded lab. Select the recorded subscription before cleanup.'
+    }
+}
+# Validate retained inventory even when the group has been recreated.
+if (Test-Path $inventoryPath) {
+    $previous = Get-Content $inventoryPath -Raw | ConvertFrom-Json
+    if ($previous.subscriptionId -ne $subscription) { throw 'Cleanup inventory belongs to another subscription.' }
+}
 $exists = (Invoke-AzureCli (@('group','exists','-n',$ResourceGroup,'-o','tsv')+$base) | Out-String).Trim() -eq 'true'
 if ($exists) {
     $group = Read-AzureJson (@('group','show','-n',$ResourceGroup)+$base)

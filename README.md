@@ -119,6 +119,14 @@ behaviour; live identity, networking and inference require Azure validation.
 
 ## Cleanup
 
+After deletion, setup archives retired state and generates fresh resource names.
+`stop-agentic-ops.ps1` without `-DeleteResourceGroup` only removes workloads;
+it does not stop infrastructure charges. With that switch it delegates to the
+verified cleanup script below.
+
+Cleanup refuses an active subscription that differs from the saved lab state.
+Keep `.local/` through deletion and retries.
+
 Save evidence, then delete the dedicated lab:
 
 ~~~powershell
