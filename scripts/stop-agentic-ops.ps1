@@ -32,21 +32,12 @@ if ($LASTEXITCODE -ne 0 -or $null -eq $group) {
 }
 
 if ($DeleteResourceGroup) {
-    $confirmation = Read-Host "Type the resource group name '$ResourceGroup' to permanently delete the entire resource group"
-    if ($confirmation -cne $ResourceGroup) {
-        throw "Confirmation did not match. No resources were changed."
-    }
-
-    if ($PSCmdlet.ShouldProcess($ResourceGroup, "Delete the entire Azure resource group")) {
-        az group delete --name $ResourceGroup --yes --no-wait
-        if ($LASTEXITCODE -ne 0) {
-            throw "Azure resource group deletion failed."
-        }
-        Write-Host "Resource group deletion started: $ResourceGroup"
-    }
-    exit 0
+    # Delegate to the verified cleanup path, including node groups and watchers.
+    & (Join-Path $PSScriptRoot 'delete-environment-resource-group.ps1') -ResourceGroup $ResourceGroup -WhatIf:$WhatIfPreference
+    return
 }
 
+Write-Warning "Workload-only removal does not stop Azure infrastructure charges. Use -DeleteResourceGroup for full cleanup."
 Assert-Command "kubectl"
 
 if ($PSCmdlet.ShouldProcess("agentic-ops namespace", "Remove the AKS workload")) {
