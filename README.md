@@ -11,6 +11,15 @@ policy-controlled remediation of container image-reference errors.
 [Project solution PDF](Azure_Kubernetes_Agentic_Ops_Project_Solution_public.pdf) ·
 [Project concept](project-concept.md)
 
+## Individual lab reports
+
+Use `python scripts/validate_lab.py smoke` for this repository's existing lab.
+For setup, smoke, verified deletion, recreation and another smoke/delete,
+use the explicit `cycle` command in the [lab validation guide](docs/lab-validation.md).
+Each run writes its own JSON/Markdown report under `.local/reports/`.
+Verdicts and exit codes: PASS (0), FAIL (1), INCONCLUSIVE (2).
+No combined report across repositories is produced.
+
 ## How it works
 
 | Agent | Responsibility |
