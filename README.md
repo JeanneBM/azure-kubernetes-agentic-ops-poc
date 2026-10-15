@@ -1,5 +1,7 @@
 # Azure Kubernetes Agentic Ops — PoC
 
+> **Test workload:** `test-app` is a disposable nginx placeholder used only for fault injection and recovery checks. It has no business logic, payment processing, business data or extra backend. `tset-app` is the deliberately misspelled image alias used in the recovery scenario.
+
 [![Tests](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml/badge.svg)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml)
 
 A two-agent AKS proof of concept combining LLM-assisted diagnosis with
@@ -55,8 +57,8 @@ and role-assignment permissions. Local Docker is not required.
   Cilium and Workload Identity, Basic ACR and an Azure OpenAI model deployment.
 - Configures separate agent identities and resource-scoped permissions, builds
   the agent image in ACR and deploys both agents.
-- Imports nginx under the demo alias `payments-api:1.4.2` and starts a healthy
-  `payments-api` Deployment.
+- Imports nginx under the demo alias `test-app:1.4.2` and starts a healthy
+  `test-app` Deployment.
 - Saves configuration, a separate kubeconfig and setup snapshots under `.local/`.
 
 **Setup creates billable Azure resources.** It does not inject failures or run
@@ -82,7 +84,7 @@ Load the saved configuration and inspect the lab:
 $config = Get-Content ./.local/rg-agentic-ops-poc-lab.json -Raw | ConvertFrom-Json
 $env:KUBECONFIG = $config.kubeconfig
 kubectl get pods -n agentic-ops
-kubectl get pods -n payments
+kubectl get pods -n test-app
 ~~~
 
 To resume interrupted setup, retain local state and rerun with the same
@@ -96,8 +98,8 @@ After setup and loading the configuration above, introduce the image typo:
 
 ~~~powershell
 $registry = ($config.demoImage -split '/')[0]
-kubectl set image deployment/payments-api "api=$registry/paymnets-api:1.4.2" -n payments
-kubectl get pods -n payments -w
+kubectl set image deployment/test-app "api=$registry/tset-app:1.4.2" -n test-app
+kubectl get pods -n test-app -w
 ~~~
 
 Press Ctrl+C to stop watching, then inspect the agent decision and final state:
@@ -105,11 +107,11 @@ Press Ctrl+C to stop watching, then inspect the agent decision and final state:
 ~~~powershell
 kubectl logs -n agentic-ops deployment/agentic-ops-diagnostic
 kubectl logs -n agentic-ops deployment/agentic-ops-remediation
-kubectl get deployment payments-api -n payments -o jsonpath='{.spec.template.spec.containers[0].image}'
-kubectl get pods -n payments
+kubectl get deployment test-app -n test-app -o jsonpath='{.spec.template.spec.containers[0].image}'
+kubectl get pods -n test-app
 ~~~
 
-Expected recovery: the agent restores `payments-api:1.4.2`, verifies a healthy
+Expected recovery: the agent restores `test-app:1.4.2`, verifies a healthy
 rollout and records `resolved`. Otherwise, inspect the escalation reason.
 This is a demo, not an automated evaluation verdict. Repeated trials can be
 affected by in-memory incident deduplication.
@@ -170,3 +172,5 @@ See the [cleanup script](scripts/delete-environment-resource-group.ps1).
 
 For details, see [two-agent orchestration](docs/two-agent-orchestration.md)
 and [deployment boundaries](docs/two-workload-deployment.md).
+
+Historical evidence (logs, archives, screenshots and original reports) retains the resource names recorded at capture time. Current scripts and manifests use the neutral test-app naming. Recreate a disposable lab before using the renamed scripts against an older setup.

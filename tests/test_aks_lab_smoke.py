@@ -19,7 +19,7 @@ def adapter(tmp_path, monkeypatch):
     spec.loader.exec_module(module)
     lab = module.AksLab(tmp_path, "test", "rg-test", "scripts")
     state = {
-        "demoImage": "demo.azurecr.io/payments-api:1.4.2",
+        "demoImage": "demo.azurecr.io/test-app:1.4.2",
         "subscriptionId": "sub",
         "aksName": "aks",
         "kubeconfig": "recorded",
@@ -56,14 +56,14 @@ def test_requires_matching_audit_original_spec_and_healthy_rollout(
     after["status"]["observedGeneration"] = 3
     record = {
         "event": "two_agent_incident_decision",
-        "key": "payments/payments-api",
+        "key": "test-app/test-app",
         "status": "resolved",
         "action_executed": True,
         "action": {
             "name": "fix_image",
             "parameters": {
                 "container": "api",
-                "old_image": "demo.azurecr.io/paymnets-api:1.4.2",
+                "old_image": "demo.azurecr.io/tset-app:1.4.2",
                 "new_image": state["demoImage"],
             },
         },

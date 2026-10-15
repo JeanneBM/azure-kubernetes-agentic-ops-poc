@@ -16,7 +16,7 @@ def test_second_agent_reports_failed_verification_without_resolving():
 def test_second_agent_failure_escalates_the_incident():
     class FailingSecondAgent:
         def manages(self, namespace):
-            return namespace == "payments"
+            return namespace == "test-app"
 
         def remediate(self, trigger, facts):
             raise RuntimeError("rollout API unavailable")
@@ -36,7 +36,7 @@ def test_orchestrator_uses_the_isolated_second_agent_outcome():
             self.calls = 0
 
         def manages(self, namespace):
-            return namespace == "payments"
+            return namespace == "test-app"
 
         def remediate(self, trigger, facts):
             self.calls += 1

@@ -21,7 +21,7 @@ def test_typo_is_fixed_and_incident_resolved():
     assert result.incident.status is IncidentStatus.RESOLVED
     assert result.action_executed
     assert executor.actions[0].parameters["new_image"] == NEW
-    assert executor.actions[0].parameters["namespace"] == "payments"
+    assert executor.actions[0].parameters["namespace"] == "test-app"
 
 
 def test_unhealthy_rollout_after_fix_is_escalated_not_resolved():

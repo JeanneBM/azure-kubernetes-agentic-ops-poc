@@ -59,7 +59,7 @@ def parse_image(ref: str) -> ImageRef:
 
 
 def edit_distance(a: str, b: str) -> int:
-    """Optimal string alignment distance: a swapped pair ('paymnets') costs 1."""
+    """Optimal string alignment distance: a swapped pair ('tset') costs 1."""
     rows = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
     for i in range(len(a) + 1):
         rows[i][0] = i

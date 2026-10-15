@@ -23,7 +23,7 @@ $root = Split-Path $PSScriptRoot -Parent
 foreach ($command in 'az','kubectl','git') {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) { throw "Install $command first (Azure Cloud Shell PowerShell includes these tools)." }
 }
-foreach ($file in 'Dockerfile','deploy/aks-agentic-ops.yaml','deploy/demo-payments-api.yaml') {
+foreach ($file in 'Dockerfile','deploy/aks-agentic-ops.yaml','deploy/demo-test-app.yaml') {
     if (-not (Test-Path (Join-Path $root $file))) { throw "Missing repository file: $file" }
 }
 function Invoke-Az {
@@ -91,11 +91,12 @@ if (Test-Path $statePath) {
         modelDeployment=$ModelDeployment; modelCapacity=$ModelCapacity
         acrName="acragentpoc$suffix"; aksName='aks-agentic-ops-poc'; aiName="aoai-agentpoc-$suffix"
         diagnosticIdentity='id-agentic-diagnostic'; remediationIdentity='id-agentic-remediation'
-        managedNamespace='payments'; imageTag="poc-$suffix"
+        managedNamespace='test-app'; imageTag="poc-$suffix"
     }
     $state | ConvertTo-Json | Set-Content $statePath -Encoding utf8
     $state = Get-Content $statePath -Raw | ConvertFrom-Json
 }
+if ($state.managedNamespace -ne 'test-app') { throw 'This local state uses the previous workload naming. Delete the old disposable lab and recreate it before running the renamed setup.' }
 $work = Join-Path $local $ResourceGroup
 New-Item -ItemType Directory -Force $work | Out-Null
 $script:kubeconfig = Join-Path $work 'kubeconfig'
@@ -149,16 +150,16 @@ foreach ($entry in @(@($state.diagnosticIdentity,'agentic-ops-diagnostic'),@($st
 Write-Host '[5/7] Build agents and import the healthy demo image'
 # Docker is not required locally: the build runs in ACR.
 Invoke-Az @('acr','build','--registry',$state.acrName,'--image',"agentic-ops:$($state.imageTag)",$root) | Out-Host
-Invoke-Az @('acr','import','--name',$state.acrName,'--source','docker.io/library/nginx:1.27','--image','payments-api:1.4.2','--force','-o','none') | Out-Null
+Invoke-Az @('acr','import','--name',$state.acrName,'--source','docker.io/library/nginx:1.27','--image','test-app:1.4.2','--force','-o','none') | Out-Null
 $agentImage = "$($acr.loginServer)/agentic-ops:$($state.imageTag)"
-$demoImage = "$($acr.loginServer)/payments-api:1.4.2"
+$demoImage = "$($acr.loginServer)/test-app:1.4.2"
 $values = @{
-    ACR_LOGIN_SERVER=$acr.loginServer; AGENTIC_OPS_IMAGE=$agentImage; MANAGED_NAMESPACE='payments'
+    ACR_LOGIN_SERVER=$acr.loginServer; AGENTIC_OPS_IMAGE=$agentImage; MANAGED_NAMESPACE='test-app'
     AZURE_AI_FOUNDRY_ENDPOINT=$ai.properties.endpoint; AZURE_AI_FOUNDRY_DEPLOYMENT=$ModelDeployment
     DIAGNOSTIC_AZURE_CLIENT_ID=$diagnostic.clientId; REMEDIATION_AZURE_CLIENT_ID=$remediation.clientId
 }
 Write-Host '[6/7] Deploy healthy demo first, then both agents'
-foreach ($namespace in 'agentic-ops','payments') {
+foreach ($namespace in 'agentic-ops','test-app') {
     $nsFile = Join-Path $work "$namespace.yaml"
     "apiVersion: v1`nkind: Namespace`nmetadata:`n  name: $namespace" | Set-Content $nsFile
     Invoke-Kube @('apply','-f',$nsFile) | Out-Host
@@ -170,12 +171,12 @@ foreach ($deployment in $deployments.items) {
         Invoke-Kube @('scale',"deployment/$($deployment.metadata.name)",'-n','agentic-ops','--replicas=0') | Out-Host
     }
 }
-$demoPath = Join-Path $work 'payments-healthy.yaml'
-Render-Manifest 'deploy/demo-payments-api.yaml' $demoPath $values
-$demo = (Get-Content $demoPath -Raw).Replace('/paymnets-api:1.4.2','/payments-api:1.4.2')
+$demoPath = Join-Path $work 'test-app-healthy.yaml'
+Render-Manifest 'deploy/demo-test-app.yaml' $demoPath $values
+$demo = (Get-Content $demoPath -Raw).Replace('/tset-app:1.4.2','/test-app:1.4.2')
 Set-Content $demoPath $demo -Encoding utf8
 Invoke-Kube @('apply','-f',$demoPath) | Out-Host
-Invoke-Kube @('rollout','status','deployment/payments-api','-n','payments','--timeout=300s') | Out-Host
+Invoke-Kube @('rollout','status','deployment/test-app','-n','test-app','--timeout=300s') | Out-Host
 # The token is generated in memory and sent through stdin, never saved in setup state.
 $bytes = [byte[]]::new(32)
 [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
@@ -194,15 +195,15 @@ Write-Host '[7/7] Save setup snapshots and configuration for separate test scrip
 $setupDir = Join-Path $work ('setup/'+[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))
 New-Item -ItemType Directory -Force $setupDir | Out-Null
 Invoke-Kube @('get','deployments','-n','agentic-ops','-o','json') | Set-Content (Join-Path $setupDir 'agents.json')
-Invoke-Kube @('get','deployment','payments-api','-n','payments','-o','json') | Set-Content (Join-Path $setupDir 'payments-healthy.json')
-Invoke-Kube @('get','pods','-n','payments','-o','json') | Set-Content (Join-Path $setupDir 'payments-pods.json')
+Invoke-Kube @('get','deployment','test-app','-n','test-app','-o','json') | Set-Content (Join-Path $setupDir 'test-app-healthy.json')
+Invoke-Kube @('get','pods','-n','test-app','-o','json') | Set-Content (Join-Path $setupDir 'test-app-pods.json')
 $state | Add-Member -NotePropertyName kubeconfig -NotePropertyValue $kubeconfig -Force
 $state | Add-Member -NotePropertyName agentImage -NotePropertyValue $agentImage -Force
 $state | Add-Member -NotePropertyName demoImage -NotePropertyValue $demoImage -Force
 $state | Add-Member -NotePropertyName endpoint -NotePropertyValue $ai.properties.endpoint -Force
 $state | ConvertTo-Json | Set-Content $statePath -Encoding utf8
 Invoke-Kube @('get','pods','-n','agentic-ops') | Out-Host
-Invoke-Kube @('get','pods','-n','payments') | Out-Host
+Invoke-Kube @('get','pods','-n','test-app') | Out-Host
 Write-Host "READY FOR TESTS. No fault was injected. Configuration: $statePath"
 Write-Host "Setup snapshots: $setupDir (review before publishing). Take a screenshot of the pod tables."
 Write-Host "For manual kubectl commands in this shell: `$env:KUBECONFIG = '$kubeconfig'"

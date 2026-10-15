@@ -20,7 +20,7 @@ def registry(manifest_status, *, exchange_status=200):
             assert b"grant_type=access_token" in request.content
             return httpx.Response(exchange_status, json={"refresh_token": "rt"})
         if request.url.path == "/oauth2/token":
-            assert b"scope=repository%3Apayments-api%3Apull" in request.content
+            assert b"scope=repository%3Atest-app%3Apull" in request.content
             return httpx.Response(200, json={"access_token": "at"})
         assert request.headers["Authorization"] == "Bearer at"
         return httpx.Response(manifest_status)
@@ -28,13 +28,13 @@ def registry(manifest_status, *, exchange_status=200):
     return AcrRegistry(credential=Cred(), http_client=httpx.Client(transport=httpx.MockTransport(handler))), calls
 
 
-IMAGE = parse_image("acrprod.azurecr.io/payments-api:1.4.2")
+IMAGE = parse_image("acrprod.azurecr.io/test-app:1.4.2")
 
 
 def test_existing_manifest():
     reg, calls = registry(200)
     assert reg.exists(IMAGE) is True
-    assert calls[-1] == ("HEAD", "/v2/payments-api/manifests/1.4.2")
+    assert calls[-1] == ("HEAD", "/v2/test-app/manifests/1.4.2")
 
 
 def test_missing_manifest():

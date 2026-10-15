@@ -2,8 +2,8 @@ from agentic_ops import (
     ActionRequest, Evidence, Facts, IncidentTrigger, PullFailure, SelfCurePolicy,
 )
 
-OLD = "acrprod.azurecr.io/paymnets-api:1.4.2"
-NEW = "acrprod.azurecr.io/payments-api:1.4.2"
+OLD = "acrprod.azurecr.io/tset-app:1.4.2"
+NEW = "acrprod.azurecr.io/test-app:1.4.2"
 
 
 class FakeRegistry:
@@ -22,13 +22,13 @@ class FakeRegistry:
 def make_policy(registry=None, **kwargs):
     return SelfCurePolicy(
         registry or FakeRegistry({NEW}),
-        namespace="payments",
+        namespace="test-app",
         allowed_registries=["acrprod.azurecr.io"],
         **kwargs,
     )
 
 
-def make_trigger(namespace="payments", workload="payments-api"):
+def make_trigger(namespace="test-app", workload="test-app"):
     return IncidentTrigger(namespace, f"{workload}-abc-1", workload, "ImagePullBackOff", "corr-1")
 
 
@@ -40,7 +40,7 @@ def make_facts(image=NEW, *, groundedness=0.95, failures=None, params=None, name
     else:
         action = ActionRequest(name, params if params is not None else {"image": image})
     return Facts(
-        (Evidence("pod-phase", "Pending", "k8s://pod/payments/payments-api-abc-1"),),
+        (Evidence("pod-phase", "Pending", "k8s://pod/test-app/test-app-abc-1"),),
         groundedness, action, summary, failures,
     )
 

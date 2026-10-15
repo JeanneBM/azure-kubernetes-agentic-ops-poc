@@ -139,13 +139,13 @@ A deployment uses an intentionally incorrect image name. The system must identif
 
 | Faulty image in the manifest | Corrected image |
 |---|---|
-| `acrprod.azurecr.io/paymnets-api:1.4.2` (typo: `paymnets`) | `acrprod.azurecr.io/payments-api:1.4.2` |
+| `acrprod.azurecr.io/tset-app:1.4.2` (typo: `tset`) | `acrprod.azurecr.io/test-app:1.4.2` |
 
 **Flow:**
 
 1. Ticket `INC-4821` — pods are in `ImagePullBackOff`
 2. Agent Support runs `kubectl get/describe pods`, checks Events and ACR tags, and gathers facts
-3. Facts show that `paymnets-api:1.4.2` does not exist, while tag `1.4.2` exists in the `payments-api` repository
+3. Facts show that `tset-app:1.4.2` does not exist, while tag `1.4.2` exists in the `test-app` repository
 4. Agent Support generates the RCA, a `kubectl set image` command, and corrected YAML
 5. Human Support approves and applies the change; changing an image is outside the whitelist
 

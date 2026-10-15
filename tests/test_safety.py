@@ -10,7 +10,7 @@ def test_typo_fix_is_authorized_and_bound_to_trigger_context():
     action = make_policy().authorize(make_trigger(), make_facts())
     assert action.name == "fix_image"
     assert dict(action.parameters) == {
-        "namespace": "payments", "deployment": "payments-api", "container": "api",
+        "namespace": "test-app", "deployment": "test-app", "container": "api",
         "old_image": OLD, "new_image": NEW,
     }
 
@@ -28,14 +28,14 @@ def test_actions_outside_whitelist_are_rejected(name):
 
 
 def test_other_registry_is_rejected():
-    facts = make_facts("evil.azurecr.io/payments-api:1.4.2")
+    facts = make_facts("evil.azurecr.io/test-app:1.4.2")
     with pytest.raises(PolicyViolation, match="same registry"):
-        make_policy(FakeRegistry({"evil.azurecr.io/payments-api:1.4.2"})).authorize(make_trigger(), facts)
+        make_policy(FakeRegistry({"evil.azurecr.io/test-app:1.4.2"})).authorize(make_trigger(), facts)
 
 
 def test_registry_not_on_allowlist_is_rejected():
-    facts = make_facts(failures=(PullFailure("api", "other.azurecr.io/paymnets-api:1.4.2"),),
-                       image="other.azurecr.io/payments-api:1.4.2")
+    facts = make_facts(failures=(PullFailure("api", "other.azurecr.io/tset-app:1.4.2"),),
+                       image="other.azurecr.io/test-app:1.4.2")
     with pytest.raises(PolicyViolation, match="not allowed"):
         make_policy().authorize(make_trigger(), facts)
 
@@ -85,6 +85,6 @@ def test_parse_image_defaults_tag_and_handles_ports():
 
 
 def test_edit_distance_counts_transposition_as_one():
-    assert edit_distance("paymnets-api", "payments-api") == 1
+    assert edit_distance("tset-app", "test-app") == 1
     assert edit_distance("1.4.2", "1.4.3") == 1
     assert edit_distance("abc", "xyz") == 3

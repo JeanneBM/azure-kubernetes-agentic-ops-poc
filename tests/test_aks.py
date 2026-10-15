@@ -10,9 +10,9 @@ from conftest import NEW, OLD, make_trigger
 
 
 def pod(reason="ImagePullBackOff", image=OLD, owner=True):
-    owners = [client.V1OwnerReference(api_version="apps/v1", kind="ReplicaSet", name="payments-api-7d9", uid="u")] if owner else None
+    owners = [client.V1OwnerReference(api_version="apps/v1", kind="ReplicaSet", name="test-app-7d9", uid="u")] if owner else None
     return client.V1Pod(
-        metadata=client.V1ObjectMeta(name="payments-api-7d9-x", namespace="payments", owner_references=owners),
+        metadata=client.V1ObjectMeta(name="test-app-7d9-x", namespace="test-app", owner_references=owners),
         spec=client.V1PodSpec(containers=[client.V1Container(name="api", image=image)]),
         status=client.V1PodStatus(phase="Pending", container_statuses=[client.V1ContainerStatus(
             name="api", image=image, image_id="", ready=False, restart_count=0,
@@ -31,8 +31,8 @@ def test_workload_resolved_through_replicaset():
     apps = MagicMock()
     apps.read_namespaced_replica_set.return_value = client.V1ReplicaSet(
         metadata=client.V1ObjectMeta(owner_references=[
-            client.V1OwnerReference(api_version="apps/v1", kind="Deployment", name="payments-api", uid="d")]))
-    assert workload_of(apps, pod()) == "payments-api"
+            client.V1OwnerReference(api_version="apps/v1", kind="Deployment", name="test-app", uid="d")]))
+    assert workload_of(apps, pod()) == "test-app"
     assert workload_of(apps, pod(owner=False)) is None
 
 
@@ -59,7 +59,7 @@ def deployment(image=OLD, *, generation=2, observed=2, replicas=1, updated=1, av
 
 
 ACTION = ActionRequest("fix_image", {
-    "namespace": "payments", "deployment": "payments-api", "container": "api",
+    "namespace": "test-app", "deployment": "test-app", "container": "api",
     "old_image": OLD, "new_image": NEW,
 })
 
@@ -69,7 +69,7 @@ def test_execute_patches_only_the_image_of_the_named_container():
     apps.read_namespaced_deployment.return_value = deployment(OLD)
     AksActionExecutor(apps).execute(ACTION)
     apps.patch_namespaced_deployment.assert_called_once_with(
-        "payments-api", "payments",
+        "test-app", "test-app",
         {"spec": {"template": {"spec": {"containers": [{"name": "api", "image": NEW}]}}}},
     )
 

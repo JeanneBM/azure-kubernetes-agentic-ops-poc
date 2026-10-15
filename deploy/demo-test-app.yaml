@@ -1,22 +1,22 @@
-# Demo workload with a deliberate typo in the image name: "paymnets-api" instead of "payments-api".
+# Demo workload with a deliberate typo in the image name: "tset-app" instead of "test-app".
 # The agent should detect ImagePullBackOff, verify the corrected image exists in ACR and patch the Deployment.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: payments-api
+  name: test-app
   namespace: ${MANAGED_NAMESPACE}
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: payments-api
+      app: test-app
   template:
     metadata:
       labels:
-        app: payments-api
+        app: test-app
     spec:
       containers:
         - name: api
-          image: "${ACR_LOGIN_SERVER}/paymnets-api:1.4.2"
+          image: "${ACR_LOGIN_SERVER}/tset-app:1.4.2"
           ports:
             - containerPort: 80

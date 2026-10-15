@@ -18,7 +18,7 @@ def test_policy_rejection_survives_the_http_handoff():
         response = server.post('/internal/v1/remediate', headers={'X-Agent-Token': 'secret'}, json=payload.model_dump())
     assert response.status_code == 422
     assert 'whitelist' in response.json()['detail']
-    remote = HttpRemediationAgent('http://remediation', 'secret', 'payments', http_client=httpx.Client(
+    remote = HttpRemediationAgent('http://remediation', 'secret', 'test-app', http_client=httpx.Client(
         transport=httpx.MockTransport(lambda request: httpx.Response(422, json=response.json()))))
     with pytest.raises(PolicyViolation, match='whitelist'):
         remote.remediate(trigger, facts)

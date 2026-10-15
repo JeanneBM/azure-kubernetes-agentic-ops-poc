@@ -134,9 +134,9 @@ class AksLab:
             directory,
             "workload.json",
             "get",
-            "deployment/payments-api",
+            "deployment/test-app",
             "-n",
-            "payments",
+            "test-app",
         )
         checks = {"recordedCluster": True, "healthyWorkload": self.healthy(workload)}
         containers = workload["spec"]["template"]["spec"]["containers"]
@@ -172,9 +172,9 @@ class AksLab:
             directory,
             "before.json",
             "get",
-            "deployment/payments-api",
+            "deployment/test-app",
             "-n",
-            "payments",
+            "test-app",
         )
         containers = before["spec"]["template"]["spec"]["containers"]
         good = state["demoImage"]
@@ -186,7 +186,7 @@ class AksLab:
         ):
             return Outcome("INCONCLUSIVE", "healthy_baseline_required")
         registry = good.split("/", 1)[0]
-        bad = registry + "/paymnets-api:1.4.2"
+        bad = registry + "/tset-app:1.4.2"
         self.kube(
             state,
             "rollout",
@@ -211,10 +211,10 @@ class AksLab:
                 state,
                 "set",
                 "image",
-                "deployment/payments-api",
+                "deployment/test-app",
                 "api=" + bad,
                 "-n",
-                "payments",
+                "test-app",
             )
             injected = True
             decision = None
@@ -239,9 +239,9 @@ class AksLab:
                 directory,
                 "after.json",
                 "get",
-                "deployment/payments-api",
+                "deployment/test-app",
                 "-n",
-                "payments",
+                "test-app",
             )
             if decision is None:
                 return Outcome("INCONCLUSIVE", "decision_not_observed")
@@ -271,7 +271,7 @@ class AksLab:
             if injected:
                 # Preserve the failure for inspection. Cycle mode deletes the lab afterwards.
                 self.snapshot(
-                    state, directory, "pods-after.json", "get", "pods", "-n", "payments"
+                    state, directory, "pods-after.json", "get", "pods", "-n", "test-app"
                 )
                 logs = self.kube(
                     state,
@@ -294,7 +294,7 @@ class AksLab:
                 continue
             if (
                 record.get("event") == "two_agent_incident_decision"
-                and record.get("key") == "payments/payments-api"
+                and record.get("key") == "test-app/test-app"
                 and record.get("status") in {"resolved", "escalated"}
             ):
                 found = record

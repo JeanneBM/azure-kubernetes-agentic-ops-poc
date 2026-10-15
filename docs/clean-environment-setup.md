@@ -38,8 +38,8 @@ to pay for both.** This script is for reproducing setup from a clean environment
 - Separate diagnostic and remediation identities with resource-scoped
   `Cognitive Services OpenAI User` and `AcrPull` respectively.
 - Both agents, their RBAC, internal remediation Service, ingress NetworkPolicies and handoff Secret.
-- Two healthy `payments-api` replicas. This is imported `nginx:1.27` under the
-  demo image alias `payments-api:1.4.2`, not a payment-processing application.
+- Two healthy `test-app` replicas. This is imported `nginx:1.27` under the
+  demo image alias `test-app:1.4.2`, a placeholder with no business logic.
 
 These defaults reproduce the small lab used during setup; they are not a claim
 of the globally cheapest SKU. VM family/regional quota and SKU location
@@ -69,7 +69,7 @@ it does not change your default context. To inspect the lab afterwards:
 $config = Get-Content ./.local/rg-agentic-ops-poc-lab.json -Raw | ConvertFrom-Json
 $env:KUBECONFIG = $config.kubeconfig
 kubectl get pods -n agentic-ops
-kubectl get pods -n payments
+kubectl get pods -n test-app
 ```
 
 Configuration contains resource names, endpoint and image references, without

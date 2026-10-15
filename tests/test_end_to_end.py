@@ -31,7 +31,7 @@ class FakeCluster:
 
     def read_namespaced_replica_set(self, name, namespace):
         return client.V1ReplicaSet(metadata=client.V1ObjectMeta(owner_references=[
-            client.V1OwnerReference(api_version="apps/v1", kind="Deployment", name="payments-api", uid="d")]))
+            client.V1OwnerReference(api_version="apps/v1", kind="Deployment", name="test-app", uid="d")]))
 
     def read_namespaced_deployment(self, name, namespace):
         return self.deployment
@@ -70,12 +70,12 @@ def wire(model_image, registry_has=(NEW,)):
     )
     policy = SelfCurePolicy(
         AcrRegistry(credential=Cred(), http_client=httpx.Client(transport=httpx.MockTransport(acr))),
-        namespace="payments", allowed_registries=["acrprod.azurecr.io"],
+        namespace="test-app", allowed_registries=["acrprod.azurecr.io"],
     )
     executor = AksActionExecutor(cluster, verify_timeout=5, poll_interval=0, sleep=lambda s: None)
     results = []
     orchestrator = IncidentOrchestrator(diagnostics, remediation_agent=SafeRemediationAgent(policy, executor))
-    watcher = PodWatcher(cluster, cluster, "payments", lambda t: results.append(orchestrator.handle(t)))
+    watcher = PodWatcher(cluster, cluster, "test-app", lambda t: results.append(orchestrator.handle(t)))
     return cluster, watcher, results
 
 
@@ -89,7 +89,7 @@ def test_typo_in_image_name_is_fixed_automatically():
 
 
 def test_hallucinated_image_is_not_applied():
-    cluster, watcher, results = wire("acrprod.azurecr.io/payments-api:1.4.3")  # plausible, but this tag does not exist
+    cluster, watcher, results = wire("acrprod.azurecr.io/test-app:1.4.3")  # plausible, but this tag does not exist
     watcher.process_pod(pod())
     assert results[0].incident.status.value == "escalated"
     assert "not found" in results[0].incident.reason
