@@ -143,6 +143,11 @@ spec:
       containers:
         - name: diagnostic-agent
           image: "${AGENTIC_OPS_IMAGE}"
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
           env:
@@ -197,6 +202,11 @@ spec:
       containers:
         - name: remediation-agent
           image: "${AGENTIC_OPS_IMAGE}"
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
           env:
