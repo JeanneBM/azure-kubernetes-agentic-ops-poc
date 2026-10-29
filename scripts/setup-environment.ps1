@@ -150,7 +150,7 @@ foreach ($entry in @(@($state.diagnosticIdentity,'agentic-ops-diagnostic'),@($st
 Write-Host '[5/7] Build agents and import the healthy demo image'
 # Docker is not required locally: the build runs in ACR.
 Invoke-Az @('acr','build','--registry',$state.acrName,'--image',"agentic-ops:$($state.imageTag)",$root) | Out-Host
-Invoke-Az @('acr','import','--name',$state.acrName,'--source','docker.io/library/nginx:1.27','--image','test-app:1.4.2','--force','-o','none') | Out-Null
+Invoke-Az @('acr','import','--name',$state.acrName,'--source','docker.io/nginxinc/nginx-unprivileged:stable-alpine','--image','test-app:1.4.2','--force','-o','none') | Out-Null
 $agentImage = "$($acr.loginServer)/agentic-ops:$($state.imageTag)"
 $demoImage = "$($acr.loginServer)/test-app:1.4.2"
 $values = @{
