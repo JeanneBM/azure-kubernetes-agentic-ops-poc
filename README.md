@@ -4,6 +4,8 @@
 
 [![Tests](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml/badge.svg)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml)
 
+[![Security](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/security.yml/badge.svg)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/security.yml)
+
 A two-agent AKS proof of concept combining LLM-assisted diagnosis with
 policy-controlled remediation of container image-reference errors.
 
@@ -115,6 +117,16 @@ Expected recovery: the agent restores `test-app:1.4.2`, verifies a healthy
 rollout and records `resolved`. Otherwise, inspect the escalation reason.
 This is a demo, not an automated evaluation verdict. Repeated trials can be
 affected by in-memory incident deduplication.
+
+## Security checks
+
+The [Security workflow](.github/workflows/security.yml) runs Bandit SAST, pip-audit
+for resolved Python dependencies, and Trivy scans for secrets, infrastructure
+configuration and HIGH/CRITICAL container vulnerabilities, including those without
+a fix. It also generates a CycloneDX SBOM and retains reports for 14 days.
+The security gate requires both scanner jobs to pass. Checks run on main pushes,
+pull requests, weekly and on manual dispatch; they do not deploy to Azure.
+A passing badge describes these automated checks, not a complete security audit.
 
 ## Local checks
 
