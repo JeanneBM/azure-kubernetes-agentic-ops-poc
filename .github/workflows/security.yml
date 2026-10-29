@@ -79,15 +79,21 @@ jobs:
           import azure.identity, kubernetes, uvicorn
           from unittest.mock import patch
           from fastapi.testclient import TestClient
-          os.environ["AZURE_AI_FOUNDRY_ENDPOINT"] = "https://example.invalid"
-          os.environ["AZURE_AI_FOUNDRY_DEPLOYMENT"] = "offline-smoke"
-          with patch("agentic_ops.aks.AksDiagnosticProvider"), patch("agentic_ops.aks.AksActionExecutor"), patch("agentic_ops.foundry.FoundryDiagnosticProvider"):
-              from agentic_ops.web import app
-              with TestClient(app) as client:
-                  response = client.get("/healthz")
-                  assert response.status_code == 200
-                  assert response.json() == {"status": "ok"}
-          print("Runtime imports and HTTP health passed as non-root")
+          os.environ.update(AGENTIC_OPS_NAMESPACE="test-app",
+                            AGENTIC_OPS_ALLOWED_REGISTRIES="example.azurecr.io",
+                            AGENTIC_OPS_REMEDIATION_TOKEN="offline-smoke-token",
+                            AGENTIC_OPS_REMEDIATION_URL="http://remediation.invalid",
+                            AZURE_AI_FOUNDRY_ENDPOINT="https://example.invalid",
+                            AZURE_AI_FOUNDRY_DEPLOYMENT="offline-smoke")
+          from agentic_ops.split_app import build_app
+          for role in ("diagnostic", "remediation"):
+              os.environ["AGENTIC_OPS_ROLE"] = role
+              with patch("kubernetes.config.load_incluster_config"), patch("agentic_ops.aks.AksDiagnosticProvider"), patch("agentic_ops.aks.AksActionExecutor"), patch("agentic_ops.foundry.FoundryDiagnosticProvider"), patch("agentic_ops.acr.AcrRegistry"), patch("agentic_ops.watcher.PodWatcher"):
+                  with TestClient(build_app()) as client:
+                      response = client.get("/healthz")
+                      assert response.status_code == 200
+                      assert response.json() == {"status": "ok"}
+          print("Both workload health checks passed as non-root")
           PY
       - name: Scan container (including vulnerabilities without a fix)
         if: ${{ !cancelled() }}
