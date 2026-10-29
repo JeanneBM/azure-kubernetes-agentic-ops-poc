@@ -1,10 +1,10 @@
 # Azure Kubernetes Agentic Ops — PoC
 
+[![Tests](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml)
+
+[![Security](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/security.yml)
+
 > **Test workload:** `test-app` is a disposable nginx placeholder used only for fault injection and recovery checks. It has no business logic, payment processing, business data or extra backend. `tset-app` is the deliberately misspelled image alias used in the recovery scenario.
-
-[![Tests](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml/badge.svg)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/test.yml)
-
-[![Security](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/security.yml/badge.svg)](https://github.com/JeanneBM/azure-kubernetes-agentic-ops-poc/actions/workflows/security.yml)
 
 A two-agent AKS proof of concept combining LLM-assisted diagnosis with
 policy-controlled remediation of container image-reference errors.
