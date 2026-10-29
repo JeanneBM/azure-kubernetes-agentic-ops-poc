@@ -34,7 +34,8 @@ def test_cleanup_refuses_selected_subscription_mismatch_before_cloud_mutation(tm
 
 
 @pytest.mark.parametrize("exists", [False, True])
-def test_setup_retains_live_state_but_retires_deleted_lab_names(tmp_path, exists):
+@pytest.mark.parametrize("managed_namespace", ["test-app", "payments", None])
+def test_setup_retains_live_state_but_retires_deleted_lab_names(tmp_path, exists, managed_namespace):
     root = Path(__file__).resolve().parents[1]
     source = (root / "scripts/setup-environment.ps1").read_text()
     begin = source.index("$local =")
@@ -46,6 +47,8 @@ def test_setup_retains_live_state_but_retires_deleted_lab_names(tmp_path, exists
                     modelName="gpt-4.1-nano", modelVersion="2025-04-14",
                     modelDeployment="diagnostic-gpt41nano", modelCapacity=10,
                     acrName="prior-registry", aiName="prior-account")
+    if managed_namespace is not None:
+        previous["managedNamespace"] = managed_namespace
     (local / "rg-demo.json").write_text(json.dumps(previous))
     header = "$root = '" + str(tmp_path).replace("'", "''") + "'\n"
     for name in ["SubscriptionId", "ResourceGroup", "Location", "AiLocation", "NodeVmSize", "ModelName", "ModelVersion", "ModelDeployment"]:
@@ -56,8 +59,15 @@ def test_setup_retains_live_state_but_retires_deleted_lab_names(tmp_path, exists
     fixture = tmp_path / "state-check.ps1"
     fixture.write_text(header + source[begin:end] + "\n$state | ConvertTo-Json -Compress\n")
     result = subprocess.run([PWSH, "-NoProfile", "-File", str(fixture)], capture_output=True, text=True, timeout=30)
+    if exists and managed_namespace != "test-app":
+        assert result.returncode != 0
+        assert "previous workload naming" in result.stderr
+        assert json.loads((local / "rg-demo.json").read_text()) == previous
+        assert not (local / "retired").exists()
+        return
     assert result.returncode == 0, result.stderr
     state = json.loads(result.stdout)
+    assert state["managedNamespace"] == "test-app"
     if exists:
         assert state["aiName"] == "prior-account"
         assert not (local / "retired").exists()
